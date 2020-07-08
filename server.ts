@@ -1,15 +1,24 @@
 import * as express from 'express';
-import {graphqlHTTP} from 'express-graphql';
-
 import schema from './graphql/schema';
+import { createServer } from 'http';
+import { ApolloServer } from 'apollo-server-express';
 import resolvers from './graphql/resolvers';
 
+const apollo = new ApolloServer({
+  typeDefs: schema,
+  resolvers: resolvers,
+  playground: {
+    endpoint: `http://localhost:4000/graphql`,
+  }
+});
 
 var app = express();
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  rootValue: resolvers,
-  graphiql: true,
-}));
-app.listen(4000);
-console.log('Running a GraphQL API server at http://localhost:4000/graphql');
+apollo.applyMiddleware({ app: app });
+
+const ws = createServer(app);
+apollo.installSubscriptionHandlers(ws);
+
+ws.listen({ port: 4000 }, () =>{
+  console.log(`GraphQL API URL: http://localhost:4000/graphql`)
+  console.log(`Subscriptions URL: ws://localhost:4000/graphql`)
+})
